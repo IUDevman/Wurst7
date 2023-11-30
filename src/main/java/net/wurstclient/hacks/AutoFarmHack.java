@@ -96,8 +96,12 @@ public final class AutoFarmHack extends Hack
 		
 		if(currentlyHarvesting != null)
 		{
-			MC.interactionManager.breakingBlock = true;
-			MC.interactionManager.cancelBlockBreaking();
+			if(!(BlockUtils.getBlock(currentlyHarvesting) instanceof SweetBerryBushBlock))
+			{
+				MC.interactionManager.breakingBlock = true;
+				MC.interactionManager.cancelBlockBreaking();
+			}
+
 			currentlyHarvesting = null;
 		}
 		
