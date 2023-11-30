@@ -19,6 +19,7 @@ import net.minecraft.network.packet.c2s.play.HandSwingC2SPacket;
 import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
+import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.wurstclient.Category;
@@ -226,6 +227,9 @@ public final class AutoFarmHack extends Hack
 		if(block instanceof BambooBlock)
 			return BlockUtils.getBlock(pos.down()) instanceof BambooBlock
 				&& !(BlockUtils.getBlock(pos.down(2)) instanceof BambooBlock);
+
+		if (block instanceof SweetBerryBushBlock)
+			return state.get(SweetBerryBushBlock.AGE) == 3;
 		
 		return false;
 	}
@@ -329,7 +333,7 @@ public final class AutoFarmHack extends Hack
 		// if we couldn't replant anything, return false
 		return false;
 	}
-	
+
 	private void harvest(List<BlockPos> blocksToHarvest)
 	{
 		if(MC.player.getAbilities().creativeMode)
@@ -338,26 +342,39 @@ public final class AutoFarmHack extends Hack
 			for(Set<BlockPos> set : prevBlocks)
 				stream = stream.filter(pos -> !set.contains(pos));
 			List<BlockPos> filteredBlocks = stream.collect(Collectors.toList());
-			
+
 			prevBlocks.addLast(new HashSet<>(filteredBlocks));
 			while(prevBlocks.size() > 5)
 				prevBlocks.removeFirst();
-			
+
 			if(!filteredBlocks.isEmpty())
 				currentlyHarvesting = filteredBlocks.get(0);
-			
+
 			MC.interactionManager.cancelBlockBreaking();
 			overlay.resetProgress();
-			BlockBreaker.breakBlocksWithPacketSpam(filteredBlocks);
+			BlockBreaker.breakBlocksWithPacketSpam(filteredBlocks.stream().filter(pos -> !(BlockUtils.getBlock(pos) instanceof SweetBerryBushBlock)).toList());
+
+			filteredBlocks.stream().filter(pos -> BlockUtils.getBlock(pos) instanceof SweetBerryBushBlock).forEach(pos -> interactWithBush(pos, false, false));
 			return;
 		}
-		
+
 		for(BlockPos pos : blocksToHarvest)
-			if(BlockBreaker.breakOneBlock(pos))
+		{
+
+			Block block = BlockUtils.getBlock(pos);
+
+			if(!(block instanceof SweetBerryBushBlock) && BlockBreaker.breakOneBlock(pos))
 			{
 				currentlyHarvesting = pos;
 				break;
 			}
+
+			if(block instanceof SweetBerryBushBlock && MC.itemUseCooldown == 0 && interactWithBush(pos, true, true))
+			{
+				currentlyHarvesting = pos;
+				break;
+			}
+		}
 		
 		if(currentlyHarvesting == null)
 			MC.interactionManager.cancelBlockBreaking();
@@ -367,5 +384,26 @@ public final class AutoFarmHack extends Hack
 			overlay.updateProgress();
 		else
 			overlay.resetProgress();
+	}
+
+	private boolean interactWithBush(BlockPos pos, boolean swingArm, boolean cooldown)
+	{
+		BlockBreaker.BlockBreakingParams params = BlockBreaker.getBlockBreakingParams(pos);
+		if(params == null)
+			return false;
+
+		WURST.getRotationFaker().faceVectorPacket(params.hitVec());
+
+		BlockHitResult blockHitResult = new BlockHitResult(params.hitVec(), params.side(), pos, false);
+
+		ActionResult actionResult = MC.interactionManager.interactBlock(MC.player, Hand.MAIN_HAND, blockHitResult);
+
+		if (actionResult.shouldSwingHand() && swingArm)
+			MC.player.networkHandler.sendPacket(new HandSwingC2SPacket(Hand.MAIN_HAND));
+
+		if(cooldown)
+			MC.itemUseCooldown = 4;
+
+		return true;
 	}
 }
