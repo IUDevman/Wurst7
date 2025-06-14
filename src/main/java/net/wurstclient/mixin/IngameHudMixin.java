@@ -7,6 +7,8 @@
  */
 package net.wurstclient.mixin;
 
+import net.minecraft.entity.Entity;
+import net.wurstclient.hack.HackList;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -60,5 +62,18 @@ public class IngameHudMixin
 		if("textures/misc/powder_snow_outline.png".equals(texture.getPath())
 			&& WurstClient.INSTANCE.getHax().noOverlayHack.isEnabled())
 			ci.cancel();
+	}
+	
+	@Inject(at = @At("HEAD"),
+		method = "renderVignetteOverlay",
+		cancellable = true)
+	private void onRenderVignetteOverlay(DrawContext context, Entity entity,
+		CallbackInfo ci)
+	{
+		HackList hax = WurstClient.INSTANCE.getHax();
+		if(hax == null || !hax.noVignetteHack.isEnabled())
+			return;
+		
+		ci.cancel();
 	}
 }
