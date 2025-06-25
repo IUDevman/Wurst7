@@ -69,10 +69,12 @@ public enum BlockBreaker
 	
 	public static boolean clickOneBlock(BlockBreakingParams params)
 	{
-		WURST.getRotationFaker().faceVectorPacket(params.hitVec);
-		
+		// check to see if block can be clicked
 		if(!BlockUtils.canBeClicked(params.pos))
 			return false;
+		
+		// face block
+		WURST.getRotationFaker().faceVectorPacket(params.hitVec);
 		
 		// click block
 		ActionResult result = MC.interactionManager.interactBlock(MC.player,
