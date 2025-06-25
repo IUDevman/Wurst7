@@ -202,6 +202,9 @@ public final class AutoFarmHack extends Hack
 		Block block = BlockUtils.getBlock(pos);
 		BlockState state = BlockUtils.getState(pos);
 		
+		if(block instanceof SweetBerryBushBlock)
+			return state.get(SweetBerryBushBlock.AGE) >= 2;
+		
 		if(block instanceof CropBlock)
 			return ((CropBlock)block).isMature(state);
 		
@@ -349,13 +352,14 @@ public final class AutoFarmHack extends Hack
 				return;
 			
 			currentlyHarvesting = blocks.get(0);
-			BlockBreaker.breakBlocksWithPacketSpam(blocks);
+			
+			handleHarvestCreativeMode(blocks);
 			return;
 		}
 		
 		// Break the first valid block in survival mode
 		currentlyHarvesting =
-			stream.filter(BlockBreaker::breakOneBlock).findFirst().orElse(null);
+			stream.filter(this::handleHarvest).findFirst().orElse(null);
 		
 		if(currentlyHarvesting == null)
 		{
@@ -365,5 +369,47 @@ public final class AutoFarmHack extends Hack
 		}
 		
 		overlay.updateProgress();
+	}
+	
+	private boolean handleHarvest(BlockPos blockPos)
+	{
+		
+		Block block = BlockUtils.getBlock(blockPos);
+		
+		if(block == null)
+		{
+			return false;
+		}
+		
+		if(block instanceof SweetBerryBushBlock)
+		{
+			return BlockBreaker.clickOneBlock(blockPos);
+		}
+		
+		return BlockBreaker.breakOneBlock(blockPos);
+	}
+	
+	private void handleHarvestCreativeMode(ArrayList<BlockPos> blocks)
+	{
+		
+		ArrayList<BlockPos> clickableBlocks = blocks.stream()
+			.filter(blockPos -> BlockUtils
+				.getBlock(blockPos) instanceof SweetBerryBushBlock)
+			.collect(Collectors.toCollection(ArrayList::new));
+		
+		if(!clickableBlocks.isEmpty())
+		{
+			clickableBlocks.forEach(BlockBreaker::clickOneBlock);
+		}
+		
+		ArrayList<BlockPos> breakableBlocks = blocks.stream()
+			.filter(blockPos -> !(BlockUtils
+				.getBlock(blockPos) instanceof SweetBerryBushBlock))
+			.collect(Collectors.toCollection(ArrayList::new));
+		
+		if(!breakableBlocks.isEmpty())
+		{
+			BlockBreaker.breakBlocksWithPacketSpam(breakableBlocks);
+		}
 	}
 }

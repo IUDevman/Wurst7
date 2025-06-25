@@ -15,6 +15,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket.Action;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
@@ -55,6 +56,37 @@ public enum BlockBreaker
 		// swing arm
 		SwingHand.SERVER.swing(Hand.MAIN_HAND);
 		return true;
+	}
+	
+	public static boolean clickOneBlock(BlockPos pos)
+	{
+		BlockBreakingParams params = getBlockBreakingParams(pos);
+		if(params == null)
+			return false;
+		
+		return clickOneBlock(params);
+	}
+	
+	public static boolean clickOneBlock(BlockBreakingParams params)
+	{
+		WURST.getRotationFaker().faceVectorPacket(params.hitVec);
+		
+		if(!BlockUtils.canBeClicked(params.pos))
+			return false;
+		
+		// click block
+		ActionResult result = MC.interactionManager.interactBlock(MC.player,
+			Hand.MAIN_HAND, params.toHitResult());
+		
+		// swing hand
+		if(result instanceof ActionResult.Success success
+			&& success.swingSource() == ActionResult.SwingSource.CLIENT)
+		{
+			SwingHand.SERVER.swing(Hand.MAIN_HAND);
+			return true;
+		}
+		
+		return false;
 	}
 	
 	/**
